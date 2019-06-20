@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-cache-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: service-cache-operator
+  template:
+    metadata:
+      labels:
+        name: service-cache-operator
+    spec:
+      serviceAccountName: service-cache-operator
+      containers:
+        - name: service-cache-operator
+          # Replace this with the built image name
+          image: REPLACE_IMAGE
+          command:
+          - service-cache-operator
+          imagePullPolicy: Always
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "service-cache-operator"
