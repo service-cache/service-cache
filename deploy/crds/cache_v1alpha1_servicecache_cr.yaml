@@ -1,0 +1,7 @@
+apiVersion: cache.service-cache.github.com/v1alpha1
+kind: ServiceCache
+metadata:
+  name: example-servicecache
+spec:
+  # Add fields here
+  size: 3
