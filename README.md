@@ -5,4 +5,4 @@ Service-cache enables services cache their response without having to make any c
 # References
 
 1. https://github.com/operator-framework/operator-sdk/blob/master/doc/user-guide.md
-2. 
+2. u
