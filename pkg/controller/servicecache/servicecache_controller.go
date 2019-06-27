@@ -100,16 +100,20 @@ func (r *ReconcileServiceCache) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	// Find the corresponding Service object
-	svc, err := r.findServiceByServiceCache(instance)
+	svc := &corev1.Service{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: svc.Name, Namespace: svc.Namespace}, svc)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			reqLogger.Info("No related Service found", "Service.Namespace", instance.Namespace, "Service.Name", instance.Name)
+			svc.Labels["service-cache.github.io/author"] = "auto-generated"
+			r.client.Add() // TODO: add the service for this service cache object
 		}
 		return reconcile.Result{}, err
 	}
 
 	// Add a label for the Service
 	svc.Labels["service-cache.github.io/author"] = "auto-generated"
+	// TODO: read the configuration from service cache object, and update the labels in service object
 	r.client.Update(context.TODO(), svc)
 
 	// Set ServiceCache instance as the owner and controller
@@ -120,11 +124,4 @@ func (r *ReconcileServiceCache) Reconcile(request reconcile.Request) (reconcile.
 	// Service has been labelled - don't requeue
 	reqLogger.Info("Found the Service", "Service.Namespace", svc.Namespace, "Service.Name", svc.Name)
 	return reconcile.Result{}, nil
-}
-
-// Find the service that is related to the given ServiceCache object
-func (r *ReconcileServiceCache) findServiceByServiceCache(sc *cachev1alpha1.ServiceCache) (*corev1.Service, error) {
-	found := &corev1.Service{}
-	err := r.client.Get(context.TODO(), types.NamespacedName{Name: sc.Name, Namespace: sc.Namespace}, found)
-	return found, err
 }
