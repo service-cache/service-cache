@@ -98,6 +98,7 @@ func (r *ReconcileServiceCache) Reconcile(request reconcile.Request) (reconcile.
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+	//TODO: validate configuration in ServiceCache object, for example, URLs.
 
 	// Find the corresponding Service object
 	svc := &corev1.Service{}

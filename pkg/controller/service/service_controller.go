@@ -2,12 +2,12 @@ package service
 
 import (
 	"context"
+	"strings"
 
 	cachev1alpha1 "service-cache-operator/pkg/apis/cache/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -107,13 +107,15 @@ func (r *ReconcileService) Reconcile(request reconcile.Request) (reconcile.Resul
 
 	// get or create the Service Cache object
 	serviceCache, err := r.getOrCreateServiceCache(instance)
-	if err != null {
+	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	// TODO: update service cache based on service's configuration
-	serviceCache.CacheableByDefault = instance.Annotations["service-cache.github.io/default"]
-	serviceCache.URLs = instance.Annotations["service-cache.github.io/URLs"]
+	serviceCache.Spec.CacheableByDefault = (instance.Annotations["service-cache.github.io/default"] == "true")
+	urls := instance.Annotations["service-cache.github.io/URLs"]
+	urls = strings.TrimSuffix(strings.TrimPrefix(urls, "["), "]")
+	serviceCache.Spec.URLs = strings.Split(urls, ",")
 
 	// Set Service instance as the owner and controller
 	if err := controllerutil.SetControllerReference(instance, serviceCache, r.scheme); err != nil {
@@ -127,13 +129,14 @@ func (r *ReconcileService) Reconcile(request reconcile.Request) (reconcile.Resul
 
 // getOrCreateServiceCache returns a ServiceCache object
 func (r *ReconcileService) getOrCreateServiceCache(svc *corev1.Service) (*cachev1alpha1.ServiceCache, error) {
+	logger := log.WithValues("ServiceCache.Namespace", svc.Namespace, "ServiceCache.Name", svc.Name)
 	found := &cachev1alpha1.ServiceCache{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: svc.Name, Namespace: svc.Namespace}, found)
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: svc.Name, Namespace: svc.Namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
 		found.Name = svc.Name
 		found.Namespace = svc.Namespace
-		found.CacheableByDefault = false
-		reqLogger.Info("Creating a new ServiceCache", "ServiceCache.Namespace", found.Namespace, "ServiceCache.Name", found.Name)
+		found.Spec.CacheableByDefault = false
+		logger.Info("Creating a new ServiceCache", "ServiceCache.Namespace", found.Namespace, "ServiceCache.Name", found.Name)
 		err = r.client.Create(context.TODO(), found)
 	}
 	return found, err
