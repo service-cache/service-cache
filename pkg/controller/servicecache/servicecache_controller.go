@@ -106,8 +106,6 @@ func (r *ReconcileServiceCache) Reconcile(request reconcile.Request) (reconcile.
 	if err != nil {
 		if errors.IsNotFound(err) {
 			reqLogger.Info("No related Service found", "Service.Namespace", instance.Namespace, "Service.Name", instance.Name)
-			svc.Labels["service-cache.github.io/author"] = "auto-generated"
-			r.client.Add() // TODO: add the service for this service cache object
 		}
 		return reconcile.Result{}, err
 	}
