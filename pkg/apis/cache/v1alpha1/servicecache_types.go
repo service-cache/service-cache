@@ -13,7 +13,6 @@ type ServiceCacheSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
-	ServiceName        int
 	CacheableByDefault bool     `json:"service-cache.github.io/default"`
 	URLs               []string `json:"service-cache.github.io/URLs"`
 }

@@ -3,5 +3,5 @@ kind: ServiceCache
 metadata:
   name: example-servicecache
 spec:
-  # Add fields here
-  size: 3
+  CacheableByDefault: true
+  URLs: "[/]"
