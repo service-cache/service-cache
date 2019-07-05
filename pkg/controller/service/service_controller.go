@@ -128,7 +128,7 @@ func (r *ReconcileService) Reconcile(request reconcile.Request) (reconcile.Resul
 	}
 
 	// TODO: update service cache based on service's configuration
-	r.copyConfigurationToServiceCache(serviceCache, instance)
+	r.copyConfigurationToServiceCache(instance, serviceCache)
 	r.client.Update(context.TODO(), serviceCache)
 
 	// Set Service instance as the owner and controller
