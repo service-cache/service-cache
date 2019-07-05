@@ -128,10 +128,8 @@ func (r *ReconcileService) Reconcile(request reconcile.Request) (reconcile.Resul
 	}
 
 	// TODO: update service cache based on service's configuration
-	serviceCache.Spec.CacheableByDefault = (instance.Annotations["service-cache.github.io/default"] == "true")
-	urls := instance.Annotations["service-cache.github.io/URLs"]
-	urls = strings.TrimSuffix(strings.TrimPrefix(urls, "["), "]")
-	serviceCache.Spec.URLs = strings.Split(urls, ",")
+	r.copyConfigurationToServiceCache(serviceCache, instance)
+	r.client.Update(context.TODO(), serviceCache)
 
 	// Set Service instance as the owner and controller
 	if err := controllerutil.SetControllerReference(instance, serviceCache, r.scheme); err != nil {
@@ -171,6 +169,13 @@ func (r *ReconcileService) createServiceCache(svc *corev1.Service) (*cachev1alph
 	err := r.client.Create(context.TODO(), found)
 
 	return found, err
+}
+
+func (r *ReconcileService) copyConfigurationToServiceCache(svc *corev1.Service, serviceCache *cachev1alpha1.ServiceCache) error {
+	serviceCache.Spec.CacheableByDefault = (svc.Annotations["service-cache.github.io/default"] == "true")
+	urls := svc.Annotations["service-cache.github.io/URLs"]
+	urls = strings.TrimSuffix(strings.TrimPrefix(urls, "["), "]")
+	serviceCache.Spec.URLs = strings.Split(urls, ",")
 }
 
 func isAnnotatedByServiceCache(svc *corev1.Service) bool {
