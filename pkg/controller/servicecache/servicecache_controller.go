@@ -118,7 +118,7 @@ func (r *ReconcileServiceCache) Reconcile(request reconcile.Request) (reconcile.
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: svc.Name, Namespace: svc.Namespace}, svc)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			reqLogger.Info("No related Service found, so delete ServiceCache object", "Service.Namespace", instance.Namespace, "Service.Name", instance.Name)
+			reqLogger.Info("No related Service found, so delete ServiceCache object", "ServiceCache.Namespace", instance.Namespace, "ServiceCache.Name", instance.Name)
 			// remove this servicecache object, since its corresponding service is not existent.
 			r.removeServiceCache(instance)
 			return reconcile.Result{}, nil
@@ -128,6 +128,7 @@ func (r *ReconcileServiceCache) Reconcile(request reconcile.Request) (reconcile.
 
 	hasDiff := controller_utils.DiffServiceAndServiceCache(svc, instance)
 	if !hasDiff {
+		reqLogger.Info("Skip reconcile: Configuration between Service and its ServiceCache has no difference", "Service.Namespace", instance.Namespace, "Service.Name", instance.Name)
 		return reconcile.Result{}, nil
 	}
 

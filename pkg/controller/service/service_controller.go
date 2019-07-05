@@ -123,6 +123,7 @@ func (r *ReconcileService) Reconcile(request reconcile.Request) (reconcile.Resul
 
 	hasDiff := controller_utils.DiffServiceAndServiceCache(instance, serviceCache)
 	if !hasDiff {
+		reqLogger.Info("Skip reconcile: Configuration between Service and its ServiceCache has no difference", "Service.Namespace", instance.Namespace, "Service.Name", instance.Name)
 		return reconcile.Result{}, nil
 	}
 
