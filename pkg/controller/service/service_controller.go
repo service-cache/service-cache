@@ -176,6 +176,7 @@ func (r *ReconcileService) copyConfigurationToServiceCache(svc *corev1.Service, 
 	urls := svc.Annotations["service-cache.github.io/URLs"]
 	urls = strings.TrimSuffix(strings.TrimPrefix(urls, "["), "]")
 	serviceCache.Spec.URLs = strings.Split(urls, ",")
+	return nil
 }
 
 func isAnnotatedByServiceCache(svc *corev1.Service) bool {
