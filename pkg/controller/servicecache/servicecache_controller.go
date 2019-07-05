@@ -88,6 +88,8 @@ func (r *ReconcileServiceCache) Reconcile(request reconcile.Request) (reconcile.
 
 	// Fetch the ServiceCache instance
 	instance := &cachev1alpha1.ServiceCache{}
+	instance.Name = request.Name
+	instance.Namespace = request.Namespace
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -111,6 +113,8 @@ func (r *ReconcileServiceCache) Reconcile(request reconcile.Request) (reconcile.
 
 	// Find the corresponding Service object
 	svc := &corev1.Service{}
+	svc.Name = instance.Name
+	svc.Namespace = instance.Namespace
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: svc.Name, Namespace: svc.Namespace}, svc)
 	if err != nil {
 		if errors.IsNotFound(err) {
