@@ -11,16 +11,17 @@ import (
 )
 
 // Diff the configuration between Service and ServiceCache objects.
+// return true if has diff
 func DiffServiceAndServiceCache(svc *corev1.Service, sc *cachev1alpha1.ServiceCache) bool {
 	if svc == nil && sc == nil {
-		return true
+		return false
 	}
 	if (svc == nil && sc != nil) || (svc != nil && sc == nil) {
-		return false
+		return true
 	}
   trimmedDefaultCacheable := strings.TrimSpace(svc.Annotations["service-cache.github.io/default"])
 	if trimmedDefaultCacheable != strconv.FormatBool(sc.Spec.CacheableByDefault) {
-		return false
+		return true
 	}
 
 	trimmedCacheableURLsFromService := strings.TrimSpace(svc.Annotations["service-cache.github.io/URLs"])
