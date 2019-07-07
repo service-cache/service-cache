@@ -176,6 +176,8 @@ func (r *ReconcileService) copyConfigurationToServiceCache(svc *corev1.Service, 
 	urls := svc.Annotations["service-cache.github.io/URLs"]
 	urls = strings.TrimSuffix(strings.TrimPrefix(urls, "["), "]")
 	serviceCache.Spec.URLs = strings.Split(urls, ",")
+	logger := log.WithValues("ServiceCache.Namespace", svc.Namespace, "ServiceCache.Name", svc.Name)
+	logger.Info("Syncing to servicecache", "CacheableByDefault", serviceCache.Spec.CacheableByDefault, "URLs", serviceCache.Spec.URLs)
 	return nil
 }
 
