@@ -10,7 +10,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// Diff the configuration between Service and ServiceCache objects.
+// KeyPrefix is the prefox of key in annotations
+const KeyPrefix = "service-cache.github.io/"
+// KeyOfCacheableUrls is the key to map the URL list
+const KeyOfCacheableUrls = "service-cache.github.io/URLs"
+// KeyOfCacheableByDefault is the key for mapping cacheableByDefault configuration
+const KeyOfCacheableByDefault = "service-cache.github.io/default"
+
+// DiffServiceAndServiceCache is used to diff the configuration between Service and ServiceCache objects.
 // return true if has diff
 func DiffServiceAndServiceCache(svc *corev1.Service, sc *cachev1alpha1.ServiceCache) bool {
 	if svc == nil && sc == nil {
