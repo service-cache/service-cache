@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -87,40 +88,38 @@ func (r *ReconcileServiceCache) Reconcile(request reconcile.Request) (reconcile.
 	reqLogger.Info("Reconciling ServiceCache")
 
 	// Fetch the ServiceCache instance
-	instance := &cachev1alpha1.ServiceCache{}
-	instance.Name = request.Name
-	instance.Namespace = request.Namespace
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// TODO: remove the annotations on its related Service object.
+	instance := &cachev1alpha1.ServiceCache{
+		ObjectMeta: metav1.ObjectMeta {
+			Name:      request.Name,
+			Namespace: request.Namespace,
+		},
+	}
+	err1 := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	if err1 != nil {
+		if errors.IsNotFound(err1) {
+			// remove the annotations on its related Service object.
 			reqLogger.Info("Removing annotations from related Service object", "Service.Name", request.Name)
-			// TODO: code here
+			r.removeAnnotationsFromService(instance.Namespace, instance.Name)
 	
 			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		return reconcile.Result{}, err
+		return reconcile.Result{}, err1
 	}
 
 	if !validateServiceCache(instance) {
-		err = r.removeServiceCache(instance)
-		return reconcile.Result{}, err
+		r.client.Delete(context.TODO(), instance)
+		return reconcile.Result{}, nil
 	}
 
-	// Find the corresponding Service object
-	svc := &corev1.Service{}
-	svc.Name = instance.Name
-	svc.Namespace = instance.Namespace
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: svc.Name, Namespace: svc.Namespace}, svc)
+	svc, err := r.findService(instance.Name, instance.Namespace)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			reqLogger.Info("No related Service found, so delete ServiceCache object", "ServiceCache.Namespace", instance.Namespace, "ServiceCache.Name", instance.Name)
+			reqLogger.Info("No related Service found, so delete ServiceCache object", "ServiceCache.Namespace")
 			// remove this servicecache object, since its corresponding service is not existent.
-			r.removeServiceCache(instance)
+			r.client.Delete(context.TODO(), instance)
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
@@ -128,13 +127,12 @@ func (r *ReconcileServiceCache) Reconcile(request reconcile.Request) (reconcile.
 
 	hasDiff := controller_utils.DiffServiceAndServiceCache(svc, instance)
 	if !hasDiff {
-		reqLogger.Info("Skip reconcile: Configuration between Service and its ServiceCache has no difference", "Service.Namespace", instance.Namespace, "Service.Name", instance.Name)
+		reqLogger.Info("Skip reconcile: Configuration between Service and its ServiceCache has no difference")
 		return reconcile.Result{}, nil
 	}
 
 	// read the configuration from service cache object, and update the annotations in service object
-	r.copyConfigurationToSvc(instance, svc)
-	r.client.Update(context.TODO(), svc)
+	r.syncServiceCacheToService(instance, svc)
 
 	// Set ServiceCache instance as the owner and controller
 	if err := controllerutil.SetControllerReference(instance, svc, r.scheme); err != nil {
@@ -146,7 +144,7 @@ func (r *ReconcileServiceCache) Reconcile(request reconcile.Request) (reconcile.
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileServiceCache) copyConfigurationToSvc(sc *cachev1alpha1.ServiceCache, svc *corev1.Service) error {
+func (r *ReconcileServiceCache) syncServiceCacheToService(sc *cachev1alpha1.ServiceCache, svc *corev1.Service) error {
 	svc.Annotations["service-cache.github.io/default"] = strconv.FormatBool(sc.Spec.CacheableByDefault)
 	if sc.Spec.URLs != nil {
 		var b strings.Builder
@@ -155,12 +153,28 @@ func (r *ReconcileServiceCache) copyConfigurationToSvc(sc *cachev1alpha1.Service
 		b.WriteString("]")
 		svc.Annotations["service-cache.github.io/URLs"] = b.String()
 	}
+	r.client.Update(context.TODO(), svc)
   return nil
 }
 
-func (r *ReconcileServiceCache) removeServiceCache(sc *cachev1alpha1.ServiceCache) error {
-	err := r.client.Delete(context.TODO(), sc)
-  return err
+func (r *ReconcileServiceCache) removeAnnotationsFromService(svcName, svcNamespace string) error {
+	svc, err := r.findService(svcName, svcNamespace)
+	if err == nil {
+		delete(svc.Annotations, "service-cache.github.io/default")
+		delete(svc.Annotations, "service-cache.github.io/URLs")
+	}
+	return err
+}
+
+func (r *ReconcileServiceCache) findService(svcName, svcNamespace string) (*corev1.Service, error) {
+  svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta {
+			Name:      svcName,
+			Namespace: svcNamespace,
+		},
+	}
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: svc.Name, Namespace: svc.Namespace}, svc)
+	return svc, err
 }
 
 func validateServiceCache(sc *cachev1alpha1.ServiceCache) bool {
